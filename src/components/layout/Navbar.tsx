@@ -150,39 +150,48 @@ export default function Navbar() {
           )}
         </div>
         
-        <div className="group relative">
-          <button className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10 focus:outline-none">
-            {user?.photoURL ? (
-              <img src={user.photoURL} alt="Profile" referrerPolicy="no-referrer" />
-            ) : (
-              <User className="h-5 w-5 opacity-60" />
-            )}
-          </button>
-          
-          <div className="absolute right-0 top-full mt-2 hidden w-48 flex-col rounded-xl border border-white/10 bg-[#0F0F0F] p-1 shadow-2xl group-focus-within:flex group-hover:flex">
-            {user ? (
-              <>
-                <div className="border-b border-white/10 p-3">
-                  <p className="text-sm font-medium">{profile?.displayName || user?.displayName}</p>
-                  <p className="truncate text-xs text-white/40">{user?.email}</p>
-                </div>
-                <Link to="/profile" className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5">
-                  <User className="h-4 w-4" /> My Profile
-                </Link>
-                <Link to="/mpp" className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5">
-                  <Moon className="h-4 w-4" /> MPP Dashboard
-                </Link>
-                <button onClick={() => signOut()} className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-sm text-red-400 hover:bg-white/5">
-                  <LogOut className="h-4 w-4" /> Sign Out
-                </button>
-              </>
-            ) : (
-              <Link to="/profile" className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5 font-black uppercase tracking-widest text-[#8B5CF6]">
-                <User className="h-4 w-4" /> Sign In
+        {user ? (
+          <div className="group relative">
+            <button className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10 focus:outline-none">
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="Profile" referrerPolicy="no-referrer" />
+              ) : (
+                <User className="h-5 w-5 opacity-60" />
+              )}
+            </button>
+            
+            <div className="absolute right-0 top-full mt-2 hidden w-48 flex-col rounded-xl border border-white/10 bg-[#0F0F0F] p-1 shadow-2xl group-focus-within:flex group-hover:flex">
+              <div className="border-b border-white/10 p-3">
+                <p className="text-sm font-medium">{profile?.displayName || user?.displayName}</p>
+                <p className="truncate text-xs text-white/40">{user?.email}</p>
+              </div>
+              <Link to="/profile" className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5">
+                <User className="h-4 w-4" /> My Profile
               </Link>
-            )}
+              <Link to="/mpp" className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5">
+                <Moon className="h-4 w-4" /> MPP Dashboard
+              </Link>
+              <button onClick={() => signOut()} className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-sm text-red-400 hover:bg-white/5">
+                <LogOut className="h-4 w-4" /> Sign Out
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Link 
+              to="/profile" 
+              className="hidden lg:block px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white transition-colors"
+            >
+              Log In
+            </Link>
+            <Link 
+              to="/profile" 
+              className="flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-black hover:bg-white/90 transition-all hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+            >
+              Join Now
+            </Link>
+          </div>
+        )}
       </div>
     </nav>
   );

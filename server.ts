@@ -20,12 +20,10 @@ async function startServer() {
     app.use(vite.middlewares);
 
     // Explicit fallback for SPA routing in development
-    app.use('*', async (req, res, next) => {
+    app.get('*', async (req, res, next) => {
       const url = req.originalUrl;
       try {
-        // Read index.html from root
         let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
-        // Apply Vite HTML transforms
         template = await vite.transformIndexHtml(url, template);
         res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
       } catch (e) {

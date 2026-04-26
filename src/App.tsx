@@ -15,6 +15,7 @@ import Admin from './pages/Admin';
 import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
 import Login from './pages/Login';
+import MobileNav from './components/layout/MobileNav';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -22,25 +23,12 @@ function AppContent() {
   useEffect(() => {
     const now = Date.now();
 
-    // Frequency cap for popunder: 24 hours
-    const POPUNDER_KEY = 'adsterra_popunder_last_shown';
-    const lastPopunder = localStorage.getItem(POPUNDER_KEY);
-    const twentyFourHours = 24 * 60 * 60 * 1000;
-
-    if (!lastPopunder || now - parseInt(lastPopunder) > twentyFourHours) {
-      const script = document.createElement('script');
-      script.src = 'https://accedelid.com/f3/5f/d8/f35fd8f3c65fc113ce4deba181806518.js';
-      script.async = true;
-      document.head.appendChild(script);
-      localStorage.setItem(POPUNDER_KEY, now.toString());
-    }
-
     // Frequency cap for social bar: 1 hour
     const SOCIAL_BAR_KEY = 'adsterra_socialbar_last_shown';
     const lastSocialBar = localStorage.getItem(SOCIAL_BAR_KEY);
     const oneHour = 60 * 60 * 1000;
 
-    if (!lastSocialBar || now - parseInt(lastSocialBar) > oneHour) {
+    if (!lastSocialBar || (now - parseInt(lastSocialBar)) > oneHour) {
       const script = document.createElement('script');
       script.src = 'https://accedelid.com/36/1a/16/361a16fb9e188d3cf6b5b36adb3d1fe1.js';
       script.async = true;
@@ -60,7 +48,7 @@ function AppContent() {
   return (
     <div className="flex h-screen flex-col bg-[#050505] text-white">
       <Navbar />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden pb-16 md:pb-0">
         <Sidebar />
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
           <Routes>
@@ -69,20 +57,21 @@ function AppContent() {
             <Route path="/explore" element={<Explore />} />
             <Route path="/watch/:videoId" element={<Watch />} />
             
-            {/* Protected Routes */}
-            <Route path="/upload" element={user ? <Upload /> : <Navigate to="/" replace />} />
-            <Route path="/mpp" element={user ? <MPPDashboard /> : <Navigate to="/" replace />} />
-            <Route path="/subscriptions" element={user ? <Subscriptions /> : <Navigate to="/" replace />} />
-            <Route path="/watch-later" element={user ? <WatchLater /> : <Navigate to="/" replace />} />
-            <Route path="/history" element={user ? <History /> : <Navigate to="/" replace />} />
-            <Route path="/liked" element={user ? <LikedVideos /> : <Navigate to="/" replace />} />
-            <Route path="/admin" element={user ? <Admin /> : <Navigate to="/" replace />} />
-            <Route path="/profile" element={user ? <Profile /> : <Navigate to="/" replace />} />
+            {/* Protected Routes - Redirect to Home if not logged in (Nav and Modals handle Login) */}
+            <Route path="/upload" element={user ? <Upload /> : <Login />} />
+            <Route path="/mpp" element={user ? <MPPDashboard /> : <Login />} />
+            <Route path="/subscriptions" element={user ? <Subscriptions /> : <Login />} />
+            <Route path="/watch-later" element={user ? <WatchLater /> : <Login />} />
+            <Route path="/history" element={user ? <History /> : <Login />} />
+            <Route path="/liked" element={user ? <LikedVideos /> : <Login />} />
+            <Route path="/admin" element={user ? <Admin /> : <Login />} />
+            <Route path="/profile" element={user ? <Profile /> : <Login />} />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
+      <MobileNav />
     </div>
   );
 }

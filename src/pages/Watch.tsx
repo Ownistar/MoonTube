@@ -550,7 +550,7 @@ export default function Watch() {
                 onClick={handleShare}
                 className="flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900/50 px-6 py-2.5 hover:bg-neutral-800 transition-all text-white/60 hover:text-white shadow-xl"
               >
-                <Share className="h-4 w-4" /> <span className="text-xs font-bold uppercase tracking-widest">Relay</span>
+                <Share className="h-4 w-4" /> <span className="text-xs font-bold uppercase tracking-widest">Share</span>
               </button>
               <div className="relative" ref={menuRef}>
                 <button 
