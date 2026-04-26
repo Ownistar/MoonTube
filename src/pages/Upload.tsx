@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { getYoutubeId } from '../lib/utils';
+import { getYoutubeId, isShortUrl } from '../lib/utils';
 import { CATEGORIES } from '../types';
 import { Upload as UploadIcon, Link as LinkIcon, Check, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -24,6 +24,8 @@ export default function Upload() {
     setError('');
     
     const youtubeId = getYoutubeId(youtubeUrl);
+    const isShort = isShortUrl(youtubeUrl);
+    
     if (!youtubeId) {
       setError('Invalid YouTube URL');
       return;
@@ -47,6 +49,7 @@ export default function Upload() {
         category,
         youtubeUrl,
         youtubeId,
+        isShort,
         views: 0,
         createdAt: new Date().toISOString(),
         thumbnail: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`

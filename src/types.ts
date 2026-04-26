@@ -37,6 +37,7 @@ export interface Video {
   thumbnail: string;
   ownerName?: string;
   ownerPhoto?: string;
+  isShort?: boolean;
 }
 
 export interface Transaction {

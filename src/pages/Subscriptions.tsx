@@ -104,7 +104,7 @@ export default function Subscriptions() {
                 </p>
               </div>
               <Link 
-                to={`/profile/${channel.uid}`}
+                to={`/channel/${channel.uid}`}
                 className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0 rounded-3xl"
               />
             </motion.div>

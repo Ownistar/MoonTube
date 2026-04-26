@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Video, CATEGORIES } from '../types';
 import VideoCard from '../components/video/VideoCard';
-import { User, Film, BarChart3, Settings, Edit2, Trash2, X, Check, Save, TrendingUp, Users, Clock, PlayCircle, AlertTriangle } from 'lucide-react';
+import { User, Film, BarChart3, Settings, Edit2, Trash2, X, Check, Save, TrendingUp, Users, Clock, PlayCircle, AlertTriangle, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -257,10 +257,16 @@ export default function Profile() {
                   setEditPhoto(profile?.photoURL || '');
                   setIsEditingProfile(true);
                 }}
-                className="flex items-center gap-2 rounded-2xl border border-neutral-800 bg-white/5 px-6 py-3 text-sm font-bold hover:bg-purple-600 hover:text-white transition-all transform active:scale-95"
+                className="flex items-center gap-2 rounded-2xl border border-neutral-800 bg-white/5 px-6 py-3 text-sm font-bold hover:bg-neutral-800 transition-all transform active:scale-95"
               >
                 <Settings className="h-4 w-4" /> Configure
               </button>
+              <Link 
+                to={`/channel/${user.uid}`}
+                className="flex items-center gap-2 rounded-2xl border border-purple-500/20 bg-purple-500/10 px-6 py-3 text-sm font-bold text-purple-400 hover:bg-purple-500 hover:text-white transition-all transform active:scale-95 shadow-lg"
+              >
+                <User className="h-4 w-4" /> View Channel
+              </Link>
             </div>
           </div>
         </div>
@@ -298,23 +304,68 @@ export default function Profile() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {videos.map((video) => (
-              <div key={video.id} className="relative group">
-                <VideoCard video={video} />
-                <button 
-                  onClick={() => {
-                    setEditingVideo(video);
-                    setEditTitle(video.title);
-                    setEditDesc(video.description || '');
-                    setEditCat(video.category);
-                  }}
-                  className="absolute top-2 left-2 bg-black/80 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-600 text-white shadow-xl"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </button>
+          <div className="space-y-12">
+            {/* Horizontal Shorts Shelf in Profile */}
+            {videos.some(v => v.isShort) && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-purple-500 fill-current" />
+                  <h3 className="text-lg font-black uppercase tracking-tight">Channel Shorts</h3>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+                  {videos.filter(v => v.isShort).map(short => (
+                    <div key={short.id} className="relative group shrink-0 w-[180px]">
+                      <Link to="/shorts">
+                        <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 transition-all group-hover:border-purple-500/50">
+                          <img src={short.thumbnail} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                          <div className="absolute inset-x-0 bottom-0 p-3">
+                            <h4 className="text-[10px] font-bold text-white line-clamp-2">{short.title}</h4>
+                          </div>
+                        </div>
+                      </Link>
+                      <button 
+                        onClick={() => {
+                          setEditingVideo(short);
+                          setEditTitle(short.title);
+                          setEditDesc(short.description || '');
+                          setEditCat(short.category);
+                        }}
+                        className="absolute top-2 right-2 bg-black/80 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-600 text-white shadow-xl"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Standard Videos */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Film className="h-5 w-5 text-purple-500" />
+                <h3 className="text-lg font-black uppercase tracking-tight">Main Transmissions</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {videos.filter(v => !v.isShort).map((video) => (
+                  <div key={video.id} className="relative group">
+                    <VideoCard video={video} />
+                    <button 
+                      onClick={() => {
+                        setEditingVideo(video);
+                        setEditTitle(video.title);
+                        setEditDesc(video.description || '');
+                        setEditCat(video.category);
+                      }}
+                      className="absolute top-2 left-2 bg-black/80 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-600 text-white shadow-xl"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )
       ) : (

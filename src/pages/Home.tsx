@@ -3,7 +3,8 @@ import { collection, query, orderBy, limit, getDocs, where } from 'firebase/fire
 import { db } from '../lib/firebase';
 import { Video, CATEGORIES } from '../types';
 import VideoCard from '../components/video/VideoCard';
-import { Play, Search } from 'lucide-react';
+import ShortsShelf from '../components/video/ShortsShelf';
+import { Play, Search, Zap } from 'lucide-react';
 import AdUnit from '../components/ads/AdUnit';
 import { cn } from '../lib/utils';
 
@@ -11,6 +12,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function Home() {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [shorts, setShorts] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchParams] = useSearchParams();
@@ -37,6 +39,16 @@ export default function Home() {
           id: doc.id,
           ...(doc.data() as object)
         })) as Video[];
+
+        // Fetch shorts separately if on Home/All
+        if (activeCategory === 'All' && !searchQuery) {
+          const sq = query(collection(db, 'videos'), where('isShort', '==', true), limit(10));
+          const sSnap = await getDocs(sq);
+          setShorts(sSnap.docs.map(d => ({ id: d.id, ...d.data() } as Video)));
+        }
+
+        // Filter out shorts from main feed so they don't appear in standard cards
+        videoData = videoData.filter(v => !v.isShort);
 
         if (searchQuery) {
           const lowerQuery = searchQuery.toLowerCase();
@@ -117,11 +129,18 @@ export default function Home() {
           <p className="text-neutral-500 font-medium">No content in this orbit yet.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-          {videos.map((video) => (
-            <VideoCard key={video.id} video={video} />
-          ))}
-        </div>
+        <>
+          {activeCategory === 'All' && !searchQuery && shorts.length > 0 && (
+            <div className="mb-12">
+               <ShortsShelf shorts={shorts} />
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            {videos.map((video) => (
+              <VideoCard key={video.id} video={video} />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Ad Unit */}
