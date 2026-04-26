@@ -29,21 +29,12 @@
         "youtubeUrl": { "type": "string" },
         "youtubeId": { "type": "string" },
         "views": { "type": "integer" },
+        "likes": { "type": "integer" },
+        "dislikes": { "type": "integer" },
         "createdAt": { "type": "string", "format": "date-time" },
         "thumbnail": { "type": "string" }
       },
       "required": ["ownerId", "title", "youtubeUrl", "youtubeId", "category"]
-    },
-    "VideoView": {
-      "title": "VideoView",
-      "description": "Record of a unique view",
-      "type": "object",
-      "properties": {
-        "videoId": { "type": "string" },
-        "userId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["videoId", "userId"]
     },
     "Subscription": {
       "title": "Subscription",
@@ -55,28 +46,6 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["creatorId", "subscriberId"]
-    },
-    "Like": {
-      "title": "Like",
-      "description": "Record of a unique video like",
-      "type": "object",
-      "properties": {
-        "videoId": { "type": "string" },
-        "userId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["videoId", "userId"]
-    },
-    "Dislike": {
-      "title": "Dislike",
-      "description": "Record of a unique video dislike",
-      "type": "object",
-      "properties": {
-        "videoId": { "type": "string" },
-        "userId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["videoId", "userId"]
     },
     "Comment": {
       "title": "Comment",
@@ -141,21 +110,9 @@
       "schema": "Video",
       "description": "Video records"
     },
-    "/videoViews/{viewId}": {
-      "schema": "VideoView",
-      "description": "Unique view records"
-    },
     "/subscriptions/{subId}": {
       "schema": "Subscription",
       "description": "Unique subscription records"
-    },
-    "/likes/{likeId}": {
-      "schema": "Like",
-      "description": "Unique like records"
-    },
-    "/dislikes/{dislikeId}": {
-      "schema": "Dislike",
-      "description": "Unique dislike records"
     },
     "/comments/{commentId}": {
       "schema": "Comment",

@@ -9,6 +9,7 @@ import MPPDashboard from './pages/MPPDashboard';
 import Profile from './pages/Profile';
 import Subscriptions from './pages/Subscriptions';
 import WatchLater from './pages/WatchLater';
+import History from './pages/History';
 import LikedVideos from './pages/LikedVideos';
 import Admin from './pages/Admin';
 import Navbar from './components/layout/Navbar';
@@ -74,6 +75,7 @@ function AppContent() {
             <Route path="/mpp" element={<MPPDashboard />} />
             <Route path="/subscriptions" element={<Subscriptions />} />
             <Route path="/watch-later" element={<WatchLater />} />
+            <Route path="/history" element={<History />} />
             <Route path="/liked" element={<LikedVideos />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/profile" element={<Profile />} />

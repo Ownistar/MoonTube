@@ -70,8 +70,9 @@ service cloud.firestore {
       );
       
       allow update: if isSignedIn() && (
-        // Action: Stats tracking
+        // Action: Stats tracking for creators by viewers (Economical mode: no view docs)
         (incoming().diff(existing()).affectedKeys().hasOnly(['totalViews', 'earningsBalance'])) ||
+        // Action: Subscription tracking
         (incoming().diff(existing()).affectedKeys().hasOnly(['subscriberCount']))
       );
     }
@@ -93,25 +94,16 @@ service cloud.firestore {
         (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'thumbnail', 'category'])) ||
         (incoming().diff(existing()).affectedKeys().hasOnly(['views', 'likes', 'dislikes']))
       );
+      // Economical tracking update for viewers
+      allow update: if isSignedIn() && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['views', 'likes', 'dislikes'])
+      );
       allow delete: if isOwner(existing().ownerId) || isAdmin();
-    }
-
-    match /videoViews/{viewId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
     }
 
     match /subscriptions/{subId} {
       allow read: if isSignedIn();
       allow create, delete: if isSignedIn();
-    }
-
-    match /likes/{likeId} {
-      allow read, create, delete: if isSignedIn();
-    }
-
-    match /dislikes/{dislikeId} {
-      allow read, create, delete: if isSignedIn();
     }
 
     match /comments/{commentId} {

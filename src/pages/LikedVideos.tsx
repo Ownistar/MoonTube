@@ -17,15 +17,10 @@ export default function LikedVideos() {
       if (!user) return;
       setLoading(true);
       try {
-        const q = query(
-          collection(db, 'likes'),
-          where('userId', '==', user.uid),
-          orderBy('createdAt', 'desc')
-        );
-        const snapshot = await getDocs(q);
+        const storedLikes = JSON.parse(localStorage.getItem(`likes_${user.uid}`) || '{}');
+        const videoIds = Object.keys(storedLikes);
         
-        const videoPromises = snapshot.docs.map(async (d) => {
-          const videoId = d.data().videoId;
+        const videoPromises = videoIds.map(async (videoId) => {
           const videoDoc = await getDoc(doc(db, 'videos', videoId));
           if (videoDoc.exists()) {
             return { id: videoDoc.id, ...videoDoc.data() } as Video;
@@ -47,13 +42,19 @@ export default function LikedVideos() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-8 flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10 text-purple-500 mpp-glow">
-          <ThumbsUp className="h-6 w-6" />
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10 text-purple-500 mpp-glow">
+            <ThumbsUp className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black uppercase tracking-tighter">Liked Signals</h2>
+            <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Endorsed planetary transmissions</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-black uppercase tracking-tighter">Liked Signals</h2>
-          <p className="text-xs text-neutral-500 font-bold uppercase tracking-widest">Endorsed planetary transmissions</p>
+        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 px-4 py-2">
+          <p className="text-[10px] font-black uppercase tracking-widest text-purple-400">Economical Storage Active</p>
+          <p className="text-[9px] text-purple-300/40">Likes are tracked locally to save cloud space.</p>
         </div>
       </div>
 
