@@ -33,8 +33,8 @@ export default function MPPDashboard() {
   }, [user]);
 
   const handleRequestPayout = async () => {
-    if (!profile || profile.earningsBalance < 50) {
-      setMessage('Minimum payout is $50.00');
+    if (!profile || profile.earningsBalance < 30) {
+      setMessage('Minimum payout is $30.00');
       return;
     }
 
@@ -111,7 +111,7 @@ export default function MPPDashboard() {
             </div>
             <button
               onClick={handleRequestPayout}
-              disabled={requesting || (profile?.earningsBalance || 0) < 50}
+              disabled={requesting || (profile?.earningsBalance || 0) < 30}
               className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[#8B5CF6] py-4 font-bold text-white hover:bg-[#7C3AED] disabled:opacity-30 disabled:hover:bg-[#8B5CF6] mpp-glow shadow-[0_0_15px_rgba(139,92,246,0.2)] transition-all"
             >
               <ShoppingCart className="h-5 w-5" />
@@ -119,9 +119,12 @@ export default function MPPDashboard() {
             </button>
             {message && <p className={cn("text-center text-xs font-medium", message.includes('success') ? 'text-green-500' : 'text-purple-400')}>{message}</p>}
             <div className="flex flex-col gap-1 items-center">
-              <p className="text-center text-[10px] text-white/20">Minimum withdrawal: $50.00 USD</p>
+              <p className="text-center text-[10px] text-white/20">Minimum withdrawal: $30.00 USD</p>
               <p className="max-w-[280px] text-center text-[10px] leading-relaxed text-white/20">
-                Payment Term: Net-45 (Payments are processed within 45 days of the end of the month in which the threshold was reached).
+                PayPal transaction fees are borne by the recipient and will be deducted from the payout amount.
+              </p>
+              <p className="max-w-[280px] text-center text-[10px] leading-relaxed text-white/20">
+                Payment Term: Net-45 (Processed within 45 days of month-end).
               </p>
             </div>
           </div>
@@ -161,7 +164,7 @@ export default function MPPDashboard() {
              <div className="flex items-center gap-3">
                 <ArrowUpRight className="h-6 w-6 text-yellow-500" />
                 <p className="text-sm font-medium leading-tight">
-                  <span className="text-white">New:</span> Payout limits reduced to $50.00 USD. Start earning from your lunar transmissions today.
+                  <span className="text-white">New:</span> Payout limits reduced to $30.00 USD. Start earning from your lunar transmissions today.
                 </p>
              </div>
           </div>
