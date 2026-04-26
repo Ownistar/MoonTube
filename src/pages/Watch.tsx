@@ -217,7 +217,8 @@ export default function Watch() {
           
           batch.update(doc(db, 'users', video.ownerId), {
             totalViews: increment(1),
-            earningsBalance: increment(EARNINGS_PER_VIEW)
+            earningsBalance: increment(EARNINGS_PER_VIEW),
+            _viewForVideoId: videoId
           });
           
           await batch.commit();

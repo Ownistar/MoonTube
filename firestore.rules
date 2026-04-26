@@ -69,9 +69,10 @@ service cloud.firestore {
          incoming().earningsBalance == (existing().earningsBalance - existing().earningsBalance))
       );
       
+      // Stats tracking for creators by viewers (Secure mode: requires view doc in batch)
       allow update: if isSignedIn() && (
-        // Action: Stats tracking for creators by viewers (Economical mode: no view docs)
-        (incoming().diff(existing()).affectedKeys().hasOnly(['totalViews', 'earningsBalance'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['totalViews', 'earningsBalance', '_viewForVideoId']) &&
+         existsAfter(/databases/$(database)/documents/videoViews/$(incoming().get('_viewForVideoId', 'none') + "_" + request.auth.uid))) ||
         // Action: Subscription tracking
         (incoming().diff(existing()).affectedKeys().hasOnly(['subscriberCount']))
       );
@@ -94,9 +95,12 @@ service cloud.firestore {
         (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'thumbnail', 'category'])) ||
         (incoming().diff(existing()).affectedKeys().hasOnly(['views', 'likes', 'dislikes']))
       );
-      // Economical tracking update for viewers
+      // Secure tracking update for viewers
       allow update: if isSignedIn() && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['views', 'likes', 'dislikes'])
+        (incoming().diff(existing()).affectedKeys().hasOnly(['views']) &&
+         existsAfter(/databases/$(database)/documents/videoViews/$(videoId + "_" + request.auth.uid))) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['dislikes']))
       );
       allow delete: if isOwner(existing().ownerId) || isAdmin();
     }
