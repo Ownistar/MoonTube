@@ -121,6 +121,17 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "videoId", "timestamp"]
+    },
+    "VideoView": {
+      "title": "Video View",
+      "description": "Unique view record for a user on a video",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "videoId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "videoId"]
     }
   },
   "firestore": {
@@ -148,9 +159,17 @@
       "schema": "UserLike",
       "description": "User's video likes"
     },
+    "/userDislikes/{dislikeId}": {
+      "schema": "UserLike",
+      "description": "User's video dislikes"
+    },
     "/userHistory/{historyId}": {
       "schema": "HistoryItem",
       "description": "User's viewing history"
+    },
+    "/videoViews/{viewId}": {
+      "schema": "VideoView",
+      "description": "Unique user views per video"
     },
     "/transactions/{transactionId}": {
       "schema": "Transaction",

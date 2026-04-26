@@ -132,6 +132,11 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
+    match /videoViews/{viewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId && !exists(/databases/$(database)/documents/videoViews/$(viewId));
+    }
+
     // --- Transaction Validation ---
     function isValidTransaction(data) {
       return data.keys().hasAll(['userId', 'amount', 'status', 'paypalEmail', 'createdAt']) &&

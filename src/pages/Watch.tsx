@@ -189,25 +189,44 @@ export default function Watch() {
   useEffect(() => {
     if (!user || !video || !videoId || viewChecked) return;
 
+    // Don't count views for the video owner to prevent self-faking
+    if (video.ownerId === user.uid) {
+      setViewChecked(true);
+      return;
+    }
+
     const timer = setTimeout(async () => {
       try {
-        const batch = writeBatch(db);
+        const viewId = `${videoId}_${user.uid}`;
+        const viewRef = doc(db, 'videoViews', viewId);
         
-        batch.update(doc(db, 'videos', videoId), {
-          views: increment(1)
-        });
-        
-        batch.update(doc(db, 'users', video.ownerId), {
-          totalViews: increment(1),
-          earningsBalance: increment(EARNINGS_PER_VIEW)
-        });
-        
-        await batch.commit();
+        // Check if user already viewed this video
+        const viewSnap = await getDoc(viewRef);
+        if (!viewSnap.exists()) {
+          const batch = writeBatch(db);
+          
+          batch.set(viewRef, {
+            userId: user.uid,
+            videoId,
+            createdAt: serverTimestamp()
+          });
+
+          batch.update(doc(db, 'videos', videoId), {
+            views: increment(1)
+          });
+          
+          batch.update(doc(db, 'users', video.ownerId), {
+            totalViews: increment(1),
+            earningsBalance: increment(EARNINGS_PER_VIEW)
+          });
+          
+          await batch.commit();
+        }
       } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `videos/${videoId}`);
+        handleFirestoreError(err, OperationType.WRITE, `videoViews/${videoId}_${user.uid}`);
       }
       setViewChecked(true);
-    }, 20000); // 20 seconds delay to count a view
+    }, 15000); // 15 seconds delay to count a view
 
     return () => clearTimeout(timer);
   }, [user, video, videoId, viewChecked]);
@@ -377,36 +396,49 @@ export default function Watch() {
     const url = `${window.location.origin}/watch/${videoId}`;
     
     try {
+      // Try Web Share API first
       if (navigator.share) {
         await navigator.share({
           title: video?.title,
           text: video?.description,
           url: url
         });
-      } else {
-        throw new Error('Web Share API not supported');
+        return;
       }
     } catch (err) {
-      // Fallback to clipboard if share api fails or not supported
-      try {
+      console.warn('Navigator share failed, trying clipboard:', err);
+    }
+
+    // Fallback: Try Clipboard API
+    try {
+      if (navigator.clipboard) {
         await navigator.clipboard.writeText(url);
         setShareSuccess(true);
-      } catch (clipErr) {
-        console.error('Share failed:', clipErr);
-        // Final fallback using execCommand for older browsers or restricted contexts
-        const input = document.createElement('input');
-        input.value = url;
-        document.body.appendChild(input);
-        input.select();
-        try {
-          document.execCommand('copy');
-          setShareSuccess(true);
-        } catch (execErr) {
-          console.error('ExecCommand copy failed:', execErr);
-        }
-        document.body.removeChild(input);
+        return;
       }
+    } catch (clipErr) {
+      console.error('Clipboard write failed:', clipErr);
     }
+
+    // Last Resort Fallback: Manual copy support
+    const input = document.createElement('input');
+    input.value = url;
+    document.body.appendChild(input);
+    input.select();
+    input.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        setShareSuccess(true);
+      } else {
+        alert(`Failed to auto-copy. Please copy manually: ${url}`);
+      }
+    } catch (execErr) {
+      console.error('execCommand copy failed:', execErr);
+      alert(`Please copy this link: ${url}`);
+    }
+    document.body.removeChild(input);
   };
 
   if (loading) return <div className="p-8 font-mono animate-pulse text-purple-500">ESTABLISHING ORBITAL UPLINK...</div>;
