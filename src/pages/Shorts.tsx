@@ -4,7 +4,7 @@ import { collection, query, where, getDocs, orderBy, limit, doc, setDoc, deleteD
 import { db } from '../lib/firebase';
 import { Video } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronUp, ChevronDown, MessageSquare, ThumbsUp, ThumbsDown, Maximize2, X, Play } from 'lucide-react';
+import { ChevronUp, ChevronDown, MessageSquare, ThumbsUp, ThumbsDown, Maximize2, X, Play, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 import CommentSection from '../components/video/CommentSection';
@@ -18,6 +18,7 @@ export default function Shorts() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
   const [dislikeLoading, setDislikeLoading] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -71,6 +72,16 @@ export default function Shorts() {
     setViewChecked(false);
     setShowComments(false);
   }, [currentIndex]);
+
+  useEffect(() => {
+    if (playerRef.current) {
+      if (isMuted) {
+        playerRef.current.mute();
+      } else {
+        playerRef.current.unMute();
+      }
+    }
+  }, [isMuted]);
 
   useEffect(() => {
     if (playerRef.current) {
@@ -320,6 +331,7 @@ export default function Shorts() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp') handlePrev();
       if (e.key === 'ArrowDown') handleNext();
+      if (e.key.toLowerCase() === 'm') toggleMute();
       if (e.key === ' ') {
         e.preventDefault();
         setIsPlaying(!isPlaying);
@@ -343,6 +355,11 @@ export default function Shorts() {
       setShowComments(false);
       setIsPlaying(true);
     }
+  };
+
+  const toggleMute = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setIsMuted(!isMuted);
   };
 
   if (loading) return <div className="flex items-center justify-center h-full text-purple-500 font-mono animate-pulse">ESTABLISHING SHORT-WAVE UPLINK...</div>;
@@ -477,7 +494,24 @@ export default function Shorts() {
                   )} 
                 />
               </motion.button>
-              <span className="text-[10px] font-black text-white uppercase drop-shadow-lg tracking-tighter">Skip</span>
+              <span className="text-[10px] font-black text-white uppercase drop-shadow-lg tracking-tighter">Dislike</span>
+            </div>
+            
+            <div className="flex flex-col items-center gap-1">
+              <motion.button 
+                whileTap={{ scale: 0.8 }}
+                onClick={toggleMute}
+                className="p-3 rounded-full transition-all shadow-2xl backdrop-blur-md bg-neutral-900/60 border border-white/10 hover:bg-neutral-800"
+              >
+                {isMuted ? (
+                  <VolumeX className="h-5 w-5 text-white/80" />
+                ) : (
+                  <Volume2 className="h-5 w-5 text-white/80" />
+                )}
+              </motion.button>
+              <span className="text-[10px] font-black text-white uppercase drop-shadow-lg tracking-tighter">
+                {isMuted ? 'Muted' : 'Volume'}
+              </span>
             </div>
             
             <div className="flex flex-col items-center gap-1">
