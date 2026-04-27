@@ -183,44 +183,50 @@ export default function Watch() {
   }, [videoId, user]);
 
   useEffect(() => {
-    if (!user || !video || !videoId || viewChecked) return;
-
-    // Don't count views for the video owner to prevent self-faking
-    if (video.ownerId === user.uid) {
-      setViewChecked(true);
-      return;
-    }
+    if (!video || !videoId || viewChecked) return;
 
     const timer = setTimeout(async () => {
       try {
-        const viewId = `${videoId}_${user.uid}`;
-        const viewRef = doc(db, 'videoViews', viewId);
-        
-        // Check if user already viewed this video
-        const viewSnap = await getDoc(viewRef);
-        if (!viewSnap.exists()) {
-          const batch = writeBatch(db);
-          
-          batch.set(viewRef, {
-            userId: user.uid,
-            videoId,
-            createdAt: serverTimestamp()
-          });
+        if (user) {
+          // Don't count views for the video owner to prevent self-faking
+          if (video.ownerId === user.uid) {
+            setViewChecked(true);
+            return;
+          }
 
-          batch.update(doc(db, 'videos', videoId), {
-            views: increment(1)
-          });
+          const viewId = `${videoId}_${user.uid}`;
+          const viewRef = doc(db, 'videoViews', viewId);
           
-          batch.update(doc(db, 'users', video.ownerId), {
-            totalViews: increment(1),
-            earningsBalance: increment(EARNINGS_PER_VIEW),
-            _viewForVideoId: videoId
-          });
-          
-          await batch.commit();
+          // Check if user already viewed this video
+          const viewSnap = await getDoc(viewRef);
+          if (!viewSnap.exists()) {
+            const batch = writeBatch(db);
+            
+            batch.set(viewRef, {
+              userId: user.uid,
+              videoId,
+              createdAt: serverTimestamp()
+            });
+
+            batch.update(doc(db, 'videos', videoId), {
+              views: increment(1)
+            });
+            
+            batch.update(doc(db, 'users', video.ownerId), {
+              totalViews: increment(1),
+              earningsBalance: increment(EARNINGS_PER_VIEW),
+              _viewForVideoId: videoId
+            });
+            
+            await batch.commit();
+          }
         }
       } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `videoViews/${videoId}_${user.uid}`);
+        if (user) {
+          handleFirestoreError(err, OperationType.WRITE, `videoViews/${videoId}_${user.uid}`);
+        } else {
+          console.error('Error recording guest view:', err);
+        }
       }
       setViewChecked(true);
     }, 15000); // 15 seconds delay to count a view

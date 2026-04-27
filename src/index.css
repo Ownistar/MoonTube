@@ -5,6 +5,17 @@
   --color-accent-purple-dark: #7C3AED;
   --color-bg-dark: #030303;
   --color-card-dark: #1a1a1a;
+
+  @keyframes marquee {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  --animate-marquee: marquee 10s linear infinite;
+  --animate-spin-slow: spin-slow 8s linear infinite;
 }
 
 @layer base {
