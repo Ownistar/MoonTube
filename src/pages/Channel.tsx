@@ -5,6 +5,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Video } from '../types';
 import VideoCard from '../components/video/VideoCard';
+import { formatViews } from '../lib/utils';
 import { User, Film, Check, Zap, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -94,7 +95,10 @@ export default function Channel() {
   if (loading) return <div className="p-8 font-mono animate-pulse text-purple-500">SYNCHRONIZING WITH PLANETARY NODE...</div>;
   if (!channelProfile) return <div className="p-8">Channel offline. No signal found.</div>;
 
-  const filteredVideos = activeTab === 'videos' ? videos.filter(v => !v.isShort) : videos.filter(v => v.isShort);
+  const filteredVideos = videos.filter(v => 
+    activeTab === 'shorts' ? v.isShort === true : !v.isShort
+  );
+  const totalViews = videos.reduce((acc, video) => acc + (video.views || 0), 0);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -120,7 +124,9 @@ export default function Channel() {
                   <h1 className="text-4xl font-black tracking-tighter uppercase">{channelProfile.displayName}</h1>
                   {channelProfile.mppJoinedAt && <div className="bg-purple-600 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg mpp-glow">MOON PARTNER</div>}
                 </div>
-                <p className="text-neutral-500 font-medium tracking-tight">@{channelProfile.displayName.toLowerCase().replace(/\s+/g, '')} • {channelProfile.subscriberCount || 0} Followers</p>
+                <p className="text-neutral-500 font-medium tracking-tight">
+                  @{channelProfile.displayName.toLowerCase().replace(/\s+/g, '')} • {channelProfile.subscriberCount || 0} Followers • {formatViews(totalViews)} Views
+                </p>
               </div>
 
               {currentUser && currentUser.uid !== userId && (
@@ -170,8 +176,8 @@ export default function Channel() {
       ) : activeTab === 'shorts' ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
            {filteredVideos.map(short => (
-              <Link key={short.id} to="/shorts" className="group">
-                <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 transition-all group-hover:border-purple-500/50 shadow-xl">
+              <Link key={short.id} to={`/shorts/${short.id}`} className="group">
+                <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 transition-all group-hover:border-purple-500/50 shadow-xl relative">
                   <img src={short.thumbnail} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4">
                     <h4 className="text-xs font-bold text-white line-clamp-2">{short.title}</h4>

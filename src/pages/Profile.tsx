@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Video, CATEGORIES } from '../types';
 import VideoCard from '../components/video/VideoCard';
-import { User, Film, BarChart3, Settings, Edit2, Trash2, X, Check, Save, TrendingUp, Users, Clock, PlayCircle, AlertTriangle, Zap } from 'lucide-react';
+import { User, Film, BarChart3, Settings, Edit2, Trash2, X, Check, Save, TrendingUp, Users, PlayCircle, AlertTriangle, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -387,14 +387,7 @@ export default function Profile() {
               <p className="text-4xl font-black">{profile?.totalViews || 0}</p>
               <p className="text-[10px] text-neutral-500 mt-2">Total unique planetary views</p>
            </motion.div>
-           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="p-8 rounded-3xl border border-neutral-800 bg-neutral-900/50">
-              <div className="flex items-center gap-3 text-purple-500 mb-4">
-                 <Clock className="h-5 w-5" />
-                 <span className="text-xs font-black uppercase tracking-widest">Stream Time</span>
-              </div>
-              <p className="text-4xl font-black">{videos.length * 4.2}m</p>
-              <p className="text-[10px] text-neutral-500 mt-2">Estimated combined transmission duration</p>
-           </motion.div>
+
 
            <div className="md:col-span-3 p-12 rounded-3xl border border-neutral-800 bg-neutral-900/30 flex flex-col items-center justify-center text-center">
               <PlayCircle className="h-12 w-12 text-purple-500 mb-4 opacity-50" />
