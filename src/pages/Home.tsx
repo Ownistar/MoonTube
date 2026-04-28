@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Video, CATEGORIES } from '../types';
+import { trackInterest, getRecommendedVideos } from '../lib/recommendations';
 import VideoCard from '../components/video/VideoCard';
 import { Play, Search } from 'lucide-react';
 import AdUnit from '../components/ads/AdUnit';
@@ -28,7 +29,7 @@ export default function Home() {
           q = query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(100));
           setActiveCategory('All'); // Reset category view when searching
         } else if (activeCategory === 'All') {
-          q = query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(40));
+          q = query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(100));
         } else {
           q = query(collection(db, 'videos'), where('category', '==', activeCategory), limit(40));
         }
@@ -48,7 +49,12 @@ export default function Home() {
           );
         }
 
-        setVideos(videoData);
+        if (activeCategory === 'All' && !searchQuery) {
+          // Celestial Feed: Fetch a larger pool for recommendation engine
+          setVideos(getRecommendedVideos(videoData, 20));
+        } else {
+          setVideos(videoData);
+        }
       } catch (error) {
         console.error('Error fetching videos:', error);
       } finally {

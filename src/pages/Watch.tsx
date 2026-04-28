@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, increment, collection, query, limit, getDocs, s
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Video } from '../types';
+import { trackInterest, getRecommendedVideos } from '../lib/recommendations';
 import { formatViews, formatCurrency, cn } from '../lib/utils';
 import { ThumbsUp, ThumbsDown, Bookmark, MoreHorizontal, Moon, Check, Clock, Play } from 'lucide-react';
 import VideoCard from '../components/video/VideoCard';
@@ -174,29 +175,14 @@ export default function Watch() {
 
     const fetchRelated = async () => {
       try {
-        const q = query(collection(db, 'videos'), limit(80)); // Fetch more for better sorting
+        const q = query(collection(db, 'videos'), limit(80)); 
         const snapshot = await getDocs(q);
-        const allVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Video[];
+        const allVideos = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() })) as Video[];
         
-        // Algorithm: Sort by interest match
-        const interests = JSON.parse(localStorage.getItem('moon_interests') || '{}');
-        const sorted = allVideos
-          .filter(v => v.id !== videoId)
-          .map(v => {
-            let score = 0;
-            if (v.tags) {
-              v.tags.forEach(tag => {
-                score += interests[tag] || 0;
-              });
-            }
-            // Add some randomness and boost by views slightly
-            score += Math.random() * 5; 
-            return { video: v, score };
-          })
-          .sort((a, b) => b.score - a.score)
-          .map(item => item.video);
-
-        setRelatedVideos(sorted.slice(0, 10));
+        // Use the recommendation engine for personalized "Next in Orbit"
+        const filteredPool = allVideos.filter(v => v.id !== videoId);
+        setRelatedVideos(getRecommendedVideos(filteredPool, 5));
       } catch (err) {
         console.log(err);
       }
@@ -211,14 +197,7 @@ export default function Watch() {
 
     try {
       // Interest Tracking (Algorithm)
-      if (video.tags && video.tags.length > 0) {
-        const interests = JSON.parse(localStorage.getItem('moon_interests') || '{}');
-        video.tags.forEach(tag => {
-          interests[tag] = (interests[tag] || 0) + 1;
-        });
-        // Keep top interests or just let them grow
-        localStorage.setItem('moon_interests', JSON.stringify(interests));
-      }
+      trackInterest(video.category, video.tags);
 
       // Check for unique guest view in localStorage if not logged in
       if (!user) {
@@ -264,7 +243,8 @@ export default function Watch() {
         
         batch.update(doc(db, 'users', video.ownerId), {
           totalViews: increment(1),
-          earningsBalance: increment(EARNINGS_PER_VIEW)
+          earningsBalance: increment(EARNINGS_PER_VIEW),
+          _viewForVideoId: videoId
         });
         
         await batch.commit();
@@ -286,7 +266,7 @@ export default function Watch() {
       if (!viewChecked && !watchTimerRef.current) {
         watchTimerRef.current = setTimeout(() => {
           countView();
-        }, 10000); // 10 seconds requirement
+        }, 5000); // 5 seconds requirement
       }
     } else {
       // If paused or ended, clear timer

@@ -75,11 +75,13 @@ service cloud.firestore {
       );
       
       // Stats tracking for creators by viewers
-      allow update: if isVerified() && (
+      allow update: if isSignedIn() && (
         (incoming().diff(existing()).affectedKeys().hasOnly(['totalViews', 'earningsBalance', '_viewForVideoId']) &&
+         incoming().totalViews == existing().totalViews + 1 &&
+         incoming().earningsBalance >= existing().earningsBalance &&
          existsAfter(/databases/$(database)/documents/videoViews/$(incoming().get('_viewForVideoId', 'none') + "_" + request.auth.uid))) ||
         // Action: Subscription tracking
-        (incoming().diff(existing()).affectedKeys().hasOnly(['subscriberCount']))
+        (isVerified() && incoming().diff(existing()).affectedKeys().hasOnly(['subscriberCount']))
       );
     }
 
@@ -100,13 +102,19 @@ service cloud.firestore {
         (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'thumbnail', 'category', 'ownerName', 'ownerPhoto'])) ||
         (incoming().diff(existing()).affectedKeys().hasOnly(['views', 'likes', 'dislikes']))
       );
-      // Secure tracking update for viewers
-      allow update: if isVerified() && (
+      // Secure tracking update for viewers (Logged in)
+      allow update: if isSignedIn() && (
         (incoming().diff(existing()).affectedKeys().hasOnly(['views']) &&
+         incoming().views == existing().views + 1 &&
          existsAfter(/databases/$(database)/documents/videoViews/$(videoId + "_" + request.auth.uid))) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
-        (incoming().diff(existing()).affectedKeys().hasOnly(['dislikes']))
+        (isVerified() && incoming().diff(existing()).affectedKeys().hasOnly(['likes'])) ||
+        (isVerified() && incoming().diff(existing()).affectedKeys().hasOnly(['dislikes']))
       );
+      // Guest view count (unauthenticated increment)
+      allow update: if !isSignedIn() && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['views']) &&
+                    incoming().views == existing().views + 1;
+      
       allow delete: if isVerified() && (isOwner(existing().ownerId) || isAdmin());
     }
 
@@ -157,9 +165,9 @@ service cloud.firestore {
     }
 
     match /videoViews/{viewId} {
-      allow get: if isVerified() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
-      allow list: if isVerified() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isVerified() && incoming().userId == request.auth.uid && !exists(/databases/$(database)/documents/videoViews/$(viewId)) && isValidId(viewId);
+      allow get: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid && !exists(/databases/$(database)/documents/videoViews/$(viewId)) && isValidId(viewId);
     }
 
     // --- Transaction Validation ---
