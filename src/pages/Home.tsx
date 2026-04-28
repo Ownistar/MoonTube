@@ -3,16 +3,15 @@ import { collection, query, orderBy, limit, getDocs, where } from 'firebase/fire
 import { db } from '../lib/firebase';
 import { Video, CATEGORIES } from '../types';
 import VideoCard from '../components/video/VideoCard';
-import ShortsShelf from '../components/video/ShortsShelf';
-import { Play, Search, Zap } from 'lucide-react';
+import { Play, Search } from 'lucide-react';
 import AdUnit from '../components/ads/AdUnit';
 import { cn } from '../lib/utils';
 
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import NativeAd from '../components/ads/NativeAd';
 
 export default function Home() {
   const [videos, setVideos] = useState<Video[]>([]);
-  const [shorts, setShorts] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchParams] = useSearchParams();
@@ -35,46 +34,21 @@ export default function Home() {
         }
         
         const snapshot = await getDocs(q);
-        const videoData = snapshot.docs.map(doc => ({
+        let videoData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...(doc.data() as object)
         })) as Video[];
 
-        // Separate long videos and shorts
-        const longVideos = videoData.filter(v => !v.isShort);
-        const shortVideos = videoData.filter(v => v.isShort);
-
-        // If searching or category isn't All, we might still want to fetch more shorts if they exist
-        // But for simplicity, let's just use what we found in the first query
-        // or fetch more shorts if we didn't find enough in the first one
-        let finalShorts = shortVideos;
-        if (finalShorts.length < 10 && !searchQuery) {
-          let sq;
-          if (activeCategory === 'All') {
-            sq = query(collection(db, 'videos'), where('isShort', '==', true), limit(12));
-          } else {
-            sq = query(collection(db, 'videos'), where('isShort', '==', true), where('category', '==', activeCategory), limit(12));
-          }
-          const sSnap = await getDocs(sq);
-          const extraShorts = sSnap.docs.map(d => ({ id: d.id, ...(d.data() as object) } as Video));
-          
-          // Merge and deduplicate
-          const merged = [...finalShorts, ...extraShorts];
-          finalShorts = Array.from(new Map(merged.map(item => [item.id, item])).values());
-        }
-
-        let filteredLongVideos = longVideos;
         if (searchQuery) {
           const lowerQuery = searchQuery.toLowerCase();
-          filteredLongVideos = filteredLongVideos.filter(v => 
+          videoData = videoData.filter(v => 
             v.title.toLowerCase().includes(lowerQuery) || 
             v.description?.toLowerCase().includes(lowerQuery) ||
             v.category.toLowerCase().includes(lowerQuery)
           );
         }
 
-        setVideos(filteredLongVideos);
-        setShorts(finalShorts);
+        setVideos(videoData);
       } catch (error) {
         console.error('Error fetching videos:', error);
       } finally {
@@ -144,19 +118,14 @@ export default function Home() {
           <p className="text-neutral-500 font-medium">No content in this orbit yet.</p>
         </div>
       ) : (
-        <>
+        <div>
           <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 mb-12">
             {videos.map((video) => (
               <VideoCard key={video.id} video={video} />
             ))}
           </div>
-
-          {!searchQuery && shorts.length > 0 && (
-            <div className="mb-12 border-t border-neutral-800 pt-12">
-               <ShortsShelf shorts={shorts} />
-            </div>
-          )}
-        </>
+          <NativeAd />
+        </div>
       )}
 
       {/* Ad Unit */}

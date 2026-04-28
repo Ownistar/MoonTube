@@ -1,15 +1,17 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { doc, getDoc, updateDoc, increment, collection, query, limit, getDocs, setDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Video } from '../types';
 import { formatViews, formatCurrency, cn } from '../lib/utils';
-import { ThumbsUp, ThumbsDown, Bookmark, MoreHorizontal, Moon, Check, Clock } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Bookmark, MoreHorizontal, Moon, Check, Clock, Play } from 'lucide-react';
 import VideoCard from '../components/video/VideoCard';
 import CommentSection from '../components/video/CommentSection';
 import AdUnit from '../components/ads/AdUnit';
+import NativeAd from '../components/ads/NativeAd';
 import { motion, AnimatePresence } from 'motion/react';
+import YouTube, { YouTubeProps, YouTubePlayer } from 'react-youtube';
 
 enum OperationType {
   CREATE = 'create',
@@ -54,6 +56,9 @@ export default function Watch() {
   const [showMenu, setShowMenu] = useState(false);
   
   const menuRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const [playerReady, setPlayerReady] = useState(false);
+  const watchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load interaction state from Firestore
   useEffect(() => {
@@ -119,11 +124,14 @@ export default function Watch() {
       path
     };
     console.error('Firestore Error: ', JSON.stringify(errInfo));
-    // Optional: show user-friendly message
   };
 
   useEffect(() => {
     setViewChecked(false);
+    setPlayerReady(false);
+    if (watchTimerRef.current) {
+      clearTimeout(watchTimerRef.current);
+    }
   }, [videoId]);
 
   useEffect(() => {
@@ -166,13 +174,29 @@ export default function Watch() {
 
     const fetchRelated = async () => {
       try {
-        // Fetch more to ensure we have enough non-shorts even after filtering
-        const q = query(collection(db, 'videos'), limit(40));
+        const q = query(collection(db, 'videos'), limit(80)); // Fetch more for better sorting
         const snapshot = await getDocs(q);
         const allVideos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Video[];
-        // Filter out shorts and the current video
-        const filtered = allVideos.filter(v => !v.isShort && v.id !== videoId);
-        setRelatedVideos(filtered.slice(0, 10));
+        
+        // Algorithm: Sort by interest match
+        const interests = JSON.parse(localStorage.getItem('moon_interests') || '{}');
+        const sorted = allVideos
+          .filter(v => v.id !== videoId)
+          .map(v => {
+            let score = 0;
+            if (v.tags) {
+              v.tags.forEach(tag => {
+                score += interests[tag] || 0;
+              });
+            }
+            // Add some randomness and boost by views slightly
+            score += Math.random() * 5; 
+            return { video: v, score };
+          })
+          .sort((a, b) => b.score - a.score)
+          .map(item => item.video);
+
+        setRelatedVideos(sorted.slice(0, 10));
       } catch (err) {
         console.log(err);
       }
@@ -182,57 +206,96 @@ export default function Watch() {
     fetchRelated();
   }, [videoId, user]);
 
-  useEffect(() => {
+  const countView = useCallback(async () => {
     if (!video || !videoId || viewChecked) return;
 
-    const timer = setTimeout(async () => {
-      try {
-        if (user) {
-          // Don't count views for the video owner to prevent self-faking
-          if (video.ownerId === user.uid) {
-            setViewChecked(true);
-            return;
-          }
-
-          const viewId = `${videoId}_${user.uid}`;
-          const viewRef = doc(db, 'videoViews', viewId);
-          
-          // Check if user already viewed this video
-          const viewSnap = await getDoc(viewRef);
-          if (!viewSnap.exists()) {
-            const batch = writeBatch(db);
-            
-            batch.set(viewRef, {
-              userId: user.uid,
-              videoId,
-              createdAt: serverTimestamp()
-            });
-
-            batch.update(doc(db, 'videos', videoId), {
-              views: increment(1)
-            });
-            
-            batch.update(doc(db, 'users', video.ownerId), {
-              totalViews: increment(1),
-              earningsBalance: increment(EARNINGS_PER_VIEW),
-              _viewForVideoId: videoId
-            });
-            
-            await batch.commit();
-          }
-        }
-      } catch (err) {
-        if (user) {
-          handleFirestoreError(err, OperationType.WRITE, `videoViews/${videoId}_${user.uid}`);
-        } else {
-          console.error('Error recording guest view:', err);
-        }
+    try {
+      // Interest Tracking (Algorithm)
+      if (video.tags && video.tags.length > 0) {
+        const interests = JSON.parse(localStorage.getItem('moon_interests') || '{}');
+        video.tags.forEach(tag => {
+          interests[tag] = (interests[tag] || 0) + 1;
+        });
+        // Keep top interests or just let them grow
+        localStorage.setItem('moon_interests', JSON.stringify(interests));
       }
-      setViewChecked(true);
-    }, 15000); // 15 seconds delay to count a view
 
-    return () => clearTimeout(timer);
-  }, [user, video, videoId, viewChecked]);
+      // Check for unique guest view in localStorage if not logged in
+      if (!user) {
+        const guestViews = JSON.parse(localStorage.getItem('moon_guest_views') || '{}');
+        if (guestViews[videoId]) {
+          setViewChecked(true);
+          return;
+        }
+        
+        // Count guest view
+        await updateDoc(doc(db, 'videos', videoId), {
+          views: increment(1)
+        });
+
+        guestViews[videoId] = true;
+        localStorage.setItem('moon_guest_views', JSON.stringify(guestViews));
+        setViewChecked(true);
+        return;
+      }
+
+      // Logged in user unique tracking
+      if (video.ownerId === user.uid) {
+        setViewChecked(true);
+        return;
+      }
+
+      const viewId = `${videoId}_${user.uid}`;
+      const viewRef = doc(db, 'videoViews', viewId);
+      const viewSnap = await getDoc(viewRef);
+
+      if (!viewSnap.exists()) {
+        const batch = writeBatch(db);
+        
+        batch.set(viewRef, {
+          userId: user.uid,
+          videoId,
+          createdAt: serverTimestamp()
+        });
+
+        batch.update(doc(db, 'videos', videoId), {
+          views: increment(1)
+        });
+        
+        batch.update(doc(db, 'users', video.ownerId), {
+          totalViews: increment(1),
+          earningsBalance: increment(EARNINGS_PER_VIEW)
+        });
+        
+        await batch.commit();
+      }
+    } catch (err) {
+      console.error('View sync failed:', err);
+    }
+    setViewChecked(true);
+  }, [video, videoId, user, viewChecked]);
+
+  const onPlayerReady: YouTubeProps['onReady'] = (event) => {
+    playerRef.current = event.target;
+    setPlayerReady(true);
+  };
+
+  const onPlayerStateChange: YouTubeProps['onStateChange'] = (event) => {
+    // View counting logic
+    if (event.data === 1) {
+      if (!viewChecked && !watchTimerRef.current) {
+        watchTimerRef.current = setTimeout(() => {
+          countView();
+        }, 10000); // 10 seconds requirement
+      }
+    } else {
+      // If paused or ended, clear timer
+      if (watchTimerRef.current) {
+        clearTimeout(watchTimerRef.current);
+        watchTimerRef.current = null;
+      }
+    }
+  };
 
   const handleSubscribe = async () => {
     if (!user || !video || video.ownerId === user.uid) return;
@@ -289,7 +352,6 @@ export default function Watch() {
         setIsLiked(false);
         setVideo(prev => prev ? { ...prev, likes: (prev.likes || 1) - 1 } : null);
       } else {
-        // Remove dislike if it exists
         if (isDisliked) {
           batch.update(doc(db, 'videos', videoId), {
             dislikes: increment(-1)
@@ -339,7 +401,6 @@ export default function Watch() {
         setIsDisliked(false);
         setVideo(prev => prev ? { ...prev, dislikes: (prev.dislikes || 1) - 1 } : null);
       } else {
-        // Remove like if it exists
         if (isLiked) {
           batch.update(doc(db, 'videos', videoId), {
             likes: increment(-1)
@@ -395,22 +456,96 @@ export default function Watch() {
     }
   };
 
+  const [sessionUnlocked, setSessionUnlocked] = useState(() => {
+    return sessionStorage.getItem('moon_unlocked') === 'true';
+  });
+
+  // Effect to clean up player ready state
+  useEffect(() => {
+    setPlayerReady(false);
+  }, [videoId]);
+
+  const handleUnlock = () => {
+    setSessionUnlocked(true);
+    sessionStorage.setItem('moon_unlocked', 'true');
+    if (playerRef.current) {
+      try {
+        playerRef.current.unMute();
+        playerRef.current.playVideo();
+      } catch (e) {}
+    }
+  };
+
   if (loading) return <div className="p-8 font-mono animate-pulse text-purple-500">ESTABLISHING ORBITAL UPLINK...</div>;
   if (!video) return <div className="p-8">Lunar static. Video not found.</div>;
+
+  const onPlayerError = (event: any) => {
+    // 100: video not found/removed, 150: playback in embed not allowed
+    if (event.data === 100 || event.data === 150 || event.data === 101) {
+      if (relatedVideos.length > 0) {
+        // Jump to next video
+        window.location.href = `/watch/${relatedVideos[0].id}`;
+      }
+    }
+  };
+
+  const playerOptions: YouTubeProps['opts'] = {
+    height: '100%',
+    width: '100%',
+    playerVars: {
+      autoplay: sessionUnlocked ? 1 : 0,
+      mute: sessionUnlocked ? 0 : 1,
+      modestbranding: 1,
+      rel: 0,
+      iv_load_policy: 3,
+      controls: 1,
+      showinfo: 0,
+      origin: window.location.origin,
+      enablejsapi: 1
+    },
+  };
 
   return (
     <div className="mx-auto flex flex-col gap-6 lg:flex-row lg:px-4">
       <div className="flex-1">
         {/* Video Player */}
-        <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black border border-neutral-800 shadow-2xl">
-          <iframe
-            src={`https://www.youtube.com/embed/${video.youtubeId}?autoplay=1`}
-            title={video.title}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="h-full w-full"
-          ></iframe>
+        <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black border border-neutral-800 shadow-2xl relative group">
+          <div className="absolute inset-0 scale-[1.02]">
+            <YouTube 
+              key={video.id} // Stable key for full re-mount on navigation
+              videoId={video.youtubeId} 
+              opts={playerOptions} 
+              onReady={onPlayerReady}
+              onStateChange={onPlayerStateChange}
+              onError={onPlayerError}
+              className="absolute inset-0 w-full h-full"
+              containerClassName="w-full h-full"
+            />
+          </div>
+
+          {!sessionUnlocked && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all group-hover:bg-black/40">
+              <button 
+                onClick={handleUnlock}
+                className="flex flex-col items-center gap-4 group/btn"
+              >
+                <div className="h-20 w-20 flex items-center justify-center rounded-full bg-purple-600 text-white shadow-2xl mpp-glow group-hover/btn:scale-110 transition-transform">
+                  <Play className="h-10 w-10 fill-current ml-1" />
+                </div>
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-white/80 animate-pulse">Tap to Start Signal</p>
+              </button>
+            </div>
+          )}
+
+          {!playerReady && sessionUnlocked && (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 z-20">
+               <motion.div 
+                 animate={{ rotate: 360 }}
+                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                 className="h-10 w-10 border-2 border-purple-500 border-t-transparent rounded-full"
+               />
+            </div>
+          )}
         </div>
 
         {/* Video Info */}
@@ -515,9 +650,6 @@ export default function Watch() {
                         <Clock className={cn("h-4 w-4", isSaved ? "text-purple-500 fill-current" : "text-white/40")} />
                         {isSaved ? 'In Signal Cache' : 'Queue to Watch'}
                       </button>
-                      <button className="flex w-full items-center gap-3 rounded-xl p-3 text-left text-xs font-bold uppercase tracking-widest hover:bg-white/5 transition-colors text-red-500/60 hover:text-red-500">
-                        <Bookmark className="h-4 w-4" /> Report Signal
-                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -537,10 +669,6 @@ export default function Watch() {
             <p className="whitespace-pre-wrap text-white/80 leading-relaxed font-medium tracking-tight">
               {video.description || "No signal metadata provided for this planetary transmission."}
             </p>
-          </div>
-
-          <div className="mt-8 flex justify-center">
-             <AdUnit type="banner" />
           </div>
 
           <CommentSection videoId={videoId || ''} />
@@ -567,12 +695,6 @@ export default function Watch() {
       </div>
 
       <div className="flex w-full flex-col gap-6 lg:w-96">
-        {/* Ad Placeholder */}
-        <div className="flex h-64 items-center justify-center rounded-3xl border border-neutral-800 bg-neutral-900/30 p-8 text-center relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-transparent animate-pulse" />
-          <p className="text-[10px] uppercase tracking-[0.6em] text-neutral-600 leading-relaxed font-black relative z-10">Marketing Satellite Uplink<br/>[Scanning for Signal]</p>
-        </div>
-        
         <div className="flex items-center gap-2">
            <div className="h-1 w-4 bg-purple-500 rounded-full" />
            <h3 className="font-black text-neutral-500 uppercase tracking-[0.2em] text-[10px]">Next in Orbit</h3>
@@ -583,6 +705,8 @@ export default function Watch() {
             <VideoCard key={v.id} video={v} />
           ))}
         </div>
+
+        <NativeAd />
       </div>
     </div>
   );

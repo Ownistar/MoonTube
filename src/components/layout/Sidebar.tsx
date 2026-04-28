@@ -1,12 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Compass, User, History, DollarSign, CloudMoon, Clock, ThumbsUp, Users, Shield, Zap } from 'lucide-react';
+import { Home, Compass, User, History, DollarSign, CloudMoon, Clock, ThumbsUp, Users, Shield } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 
 const sidebarItems = [
   { icon: Home, label: 'Home', path: '/' },
-  { icon: Zap, label: 'Shorts', path: '/shorts' },
   { icon: Compass, label: 'Explore', path: '/explore' },
   { icon: Users, label: 'Subscriptions', path: '/subscriptions' },
   { icon: DollarSign, label: 'Earnings', path: '/mpp' },

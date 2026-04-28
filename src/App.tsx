@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import Explore from './pages/Explore';
-import Shorts from './pages/Shorts';
 import Watch from './pages/Watch';
 import Upload from './pages/Upload';
 import MPPDashboard from './pages/MPPDashboard';
@@ -70,8 +69,6 @@ function AppContent() {
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/explore" element={<Explore />} />
-            <Route path="/shorts" element={<Shorts />} />
-            <Route path="/shorts/:videoId" element={<Shorts />} />
             <Route path="/watch/:videoId" element={<Watch />} />
             
             {/* Protected Routes - Redirect to Home if not logged in (Nav and Modals handle Login) */}

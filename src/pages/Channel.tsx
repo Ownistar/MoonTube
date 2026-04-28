@@ -19,7 +19,7 @@ export default function Channel() {
   const [loading, setLoading] = useState(true);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subLoading, setSubLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'videos' | 'shorts'>('videos');
+  const [activeTab, setActiveTab] = useState<'videos'>('videos');
 
   useEffect(() => {
     const fetchChannel = async () => {
@@ -95,9 +95,7 @@ export default function Channel() {
   if (loading) return <div className="p-8 font-mono animate-pulse text-purple-500">SYNCHRONIZING WITH PLANETARY NODE...</div>;
   if (!channelProfile) return <div className="p-8">Channel offline. No signal found.</div>;
 
-  const filteredVideos = videos.filter(v => 
-    activeTab === 'shorts' ? v.isShort === true : !v.isShort
-  );
+  const filteredVideos = videos;
   const totalViews = videos.reduce((acc, video) => acc + (video.views || 0), 0);
 
   return (
@@ -158,34 +156,11 @@ export default function Channel() {
         >
           <Film className="h-4 w-4" /> Vault
         </button>
-        <button 
-          onClick={() => setActiveTab('shorts')}
-          className={cn(
-            "flex items-center gap-2 px-8 py-4 text-sm font-black uppercase tracking-widest transition-all shrink-0",
-            activeTab === 'shorts' ? "border-b-2 border-purple-500 text-purple-500" : "text-neutral-500 hover:text-white"
-          )}
-        >
-          <Zap className="h-4 w-4 fill-current" /> Shorts
-        </button>
       </div>
 
       {filteredVideos.length === 0 ? (
         <div className="flex h-64 flex-col items-center justify-center rounded-3xl border border-neutral-800 bg-neutral-900/50">
           <p className="text-neutral-500 font-bold uppercase tracking-widest">No transmissions in this category.</p>
-        </div>
-      ) : activeTab === 'shorts' ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-           {filteredVideos.map(short => (
-              <Link key={short.id} to={`/shorts/${short.id}`} className="group">
-                <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 transition-all group-hover:border-purple-500/50 shadow-xl relative">
-                  <img src={short.thumbnail} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4">
-                    <h4 className="text-xs font-bold text-white line-clamp-2">{short.title}</h4>
-                    <p className="text-[10px] text-white/60 font-bold mt-1 uppercase tracking-wider">{short.views} views</p>
-                  </div>
-                </div>
-              </Link>
-           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

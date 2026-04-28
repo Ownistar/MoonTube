@@ -97,7 +97,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isVerified() && isValidVideo(incoming()) && isValidId(videoId);
       allow update: if isVerified() && (isOwner(existing().ownerId) || isAdmin()) && (
-        (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'thumbnail', 'category'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'thumbnail', 'category', 'ownerName', 'ownerPhoto'])) ||
         (incoming().diff(existing()).affectedKeys().hasOnly(['views', 'likes', 'dislikes']))
       );
       // Secure tracking update for viewers
@@ -119,6 +119,9 @@ service cloud.firestore {
     match /comments/{commentId} {
       allow read: if true;
       allow create: if isVerified() && isValidId(commentId);
+      allow update: if isVerified() && (isOwner(existing().userId) || isAdmin()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['userName', 'userPhoto'])
+      );
       allow delete: if isVerified() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 

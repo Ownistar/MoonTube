@@ -37,8 +37,8 @@ export interface Video {
   thumbnail: string;
   ownerName?: string;
   ownerPhoto?: string;
-  isShort?: boolean;
   commentCount?: number;
+  tags?: string[];
 }
 
 export interface Transaction {

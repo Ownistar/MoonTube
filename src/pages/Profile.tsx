@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, where, getDocs, orderBy, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { updateProfile } from 'firebase/auth';
+import { collection, query, where, getDocs, orderBy, updateDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Video, CATEGORIES } from '../types';
 import VideoCard from '../components/video/VideoCard';
@@ -53,14 +54,64 @@ export default function Profile() {
     if (!user || !editName) return;
     setSaveLoading(true);
     try {
+      // 1. Update Firebase Auth Profile (ensures new comments/posts are correct)
+      await updateProfile(user, {
+        displayName: editName,
+        photoURL: editPhoto
+      });
+
+      // 2. Update primary user document in Firestore
       await updateDoc(doc(db, 'users', user.uid), {
         displayName: editName,
         photoURL: editPhoto
       });
+
+      // 3. Propagate to owned videos (Denormalized)
+      const vQuery = query(collection(db, 'videos'), where('ownerId', '==', user.uid));
+      const vSnaps = await getDocs(vQuery);
+      
+      const MAX_BATCH_SIZE = 500;
+      let batch = writeBatch(db);
+      let count = 0;
+
+      for (const vDoc of vSnaps.docs) {
+        batch.update(doc(db, 'videos', vDoc.id), {
+          ownerName: editName,
+          ownerPhoto: editPhoto
+        });
+        count++;
+        if (count >= MAX_BATCH_SIZE) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+
+      // 4. Propagate to user comments (Denormalized)
+      const cQuery = query(collection(db, 'comments'), where('userId', '==', user.uid));
+      const cSnaps = await getDocs(cQuery);
+
+      for (const cDoc of cSnaps.docs) {
+        batch.update(doc(db, 'comments', cDoc.id), {
+          userName: editName,
+          userPhoto: editPhoto
+        });
+        count++;
+        if (count >= MAX_BATCH_SIZE) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+
+      if (count > 0) {
+        await batch.commit();
+      }
+
       setIsEditingProfile(false);
       window.location.reload();
     } catch (err) {
-      console.error(err);
+      console.error('Identity sync failed:', err);
     } finally {
       setSaveLoading(false);
     }
@@ -305,42 +356,6 @@ export default function Profile() {
           </div>
         ) : (
           <div className="space-y-12">
-            {/* Horizontal Shorts Shelf in Profile */}
-            {videos.some(v => v.isShort) && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-purple-500 fill-current" />
-                  <h3 className="text-lg font-black uppercase tracking-tight">Channel Shorts</h3>
-                </div>
-                <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-                  {videos.filter(v => v.isShort).map(short => (
-                    <div key={short.id} className="relative group shrink-0 w-[180px]">
-                      <Link to="/shorts">
-                        <div className="aspect-[9/16] rounded-2xl overflow-hidden bg-neutral-900 border border-white/5 transition-all group-hover:border-purple-500/50">
-                          <img src={short.thumbnail} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                          <div className="absolute inset-x-0 bottom-0 p-3">
-                            <h4 className="text-[10px] font-bold text-white line-clamp-2">{short.title}</h4>
-                          </div>
-                        </div>
-                      </Link>
-                      <button 
-                        onClick={() => {
-                          setEditingVideo(short);
-                          setEditTitle(short.title);
-                          setEditDesc(short.description || '');
-                          setEditCat(short.category);
-                        }}
-                        className="absolute top-2 right-2 bg-black/80 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-600 text-white shadow-xl"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Standard Videos */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -348,7 +363,7 @@ export default function Profile() {
                 <h3 className="text-lg font-black uppercase tracking-tight">Main Transmissions</h3>
               </div>
               <div className="grid grid-cols-1 gap-x-4 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {videos.filter(v => !v.isShort).map((video) => (
+                {videos.map((video) => (
                   <div key={video.id} className="relative group">
                     <VideoCard video={video} />
                     <button 

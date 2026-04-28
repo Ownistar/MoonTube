@@ -10,7 +10,7 @@ interface VideoCardProps {
 
 const VideoCard: React.FC<VideoCardProps> = ({ video }) => {
   const thumbnailUrl = video.thumbnail || `https://img.youtube.com/vi/${video.youtubeId}/maxresdefault.jpg`;
-  const watchUrl = video.isShort ? `/shorts/${video.id}` : `/watch/${video.id}`;
+  const watchUrl = `/watch/${video.id}`;
 
   return (
     <motion.div 

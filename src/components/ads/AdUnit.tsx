@@ -38,11 +38,19 @@ export default function AdUnit({ type, className, keyId = 'f02bb2f4cd09531450a35
     const scriptInvoke = document.createElement('script');
     scriptInvoke.type = 'text/javascript';
     scriptInvoke.src = `https://accedelid.com/${keyId}/invoke.js`;
+    scriptInvoke.onerror = () => {
+      console.warn('Ad script failed to load');
+    };
 
     adRef.current.appendChild(adContainer);
     adContainer.appendChild(scriptOptions);
     adContainer.appendChild(scriptInvoke);
 
+    return () => {
+      if (adRef.current) {
+        adRef.current.innerHTML = '';
+      }
+    };
   }, [keyId, width, height]);
 
   return (

@@ -24,7 +24,3 @@ export function getYoutubeId(url: string) {
   const match = url.match(regExp);
   return (match && match[2].length === 11) ? match[2] : null;
 }
-
-export function isShortUrl(url: string) {
-  return url.includes('/shorts/');
-}
