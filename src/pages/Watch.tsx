@@ -671,6 +671,10 @@ export default function Watch() {
             </p>
           </div>
 
+          <div className="mt-6 flex justify-center">
+            <AdUnit type="banner" />
+          </div>
+
           <CommentSection videoId={videoId || ''} />
         </div>
         
