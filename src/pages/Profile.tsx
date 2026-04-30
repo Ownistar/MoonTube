@@ -5,14 +5,14 @@ import { auth, db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Video, CATEGORIES } from '../types';
 import VideoCard from '../components/video/VideoCard';
-import { User, Film, BarChart3, Settings, Edit2, Trash2, X, Check, Save, TrendingUp, Users, PlayCircle, AlertTriangle, Zap, DollarSign } from 'lucide-react';
+import { User, Film, BarChart3, Settings, Edit2, Trash2, X, Check, Save, TrendingUp, Users, PlayCircle, AlertTriangle, Zap, DollarSign, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, formatDate } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import { handleFirestoreError, OperationType } from '../lib/firebase';
 
 export default function Profile() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'videos' | 'analytics' | 'earnings'>('videos');
@@ -318,6 +318,12 @@ export default function Profile() {
               >
                 <User className="h-4 w-4" /> View Channel
               </Link>
+              <button 
+                onClick={() => signOut()}
+                className="flex items-center gap-2 rounded-2xl border border-red-500/20 bg-red-500/10 px-6 py-3 text-sm font-bold text-red-400 hover:bg-red-500 hover:text-white transition-all transform active:scale-95 shadow-lg"
+              >
+                <LogOut className="h-4 w-4" /> Sign Out
+              </button>
             </div>
           </div>
         </div>

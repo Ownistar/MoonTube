@@ -16,7 +16,9 @@ export default function Navbar() {
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSearchQuery(searchParams.get('search') || '');
@@ -42,6 +44,9 @@ export default function Navbar() {
     const handleClickOutside = (event: MouseEvent) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -151,8 +156,11 @@ export default function Navbar() {
         </div>
         
         {user ? (
-          <div className="group relative">
-            <button className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10 focus:outline-none">
+          <div className="relative" ref={profileMenuRef}>
+            <button 
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10 focus:outline-none hover:border-purple-500/50 transition-colors"
+            >
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="Profile" referrerPolicy="no-referrer" />
               ) : (
@@ -160,21 +168,29 @@ export default function Navbar() {
               )}
             </button>
             
-            <div className="absolute right-0 top-full mt-2 hidden w-48 flex-col rounded-xl border border-white/10 bg-[#0F0F0F] p-1 shadow-2xl group-focus-within:flex group-hover:flex">
-              <div className="border-b border-white/10 p-3">
-                <p className="text-sm font-medium">{profile?.displayName || user?.displayName}</p>
-                <p className="truncate text-xs text-white/40">{user?.email}</p>
+            {showProfileMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 flex-col rounded-xl border border-white/10 bg-[#0F0F0F] p-1 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="border-b border-white/10 p-3">
+                  <p className="text-sm font-medium">{profile?.displayName || user?.displayName}</p>
+                  <p className="truncate text-xs text-white/40">{user?.email}</p>
+                </div>
+                <Link to="/profile" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5">
+                  <User className="h-4 w-4" /> My Profile
+                </Link>
+                <Link to="/mpp" onClick={() => setShowProfileMenu(false)} className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5">
+                  <Moon className="h-4 w-4" /> MPP Dashboard
+                </Link>
+                <button 
+                  onClick={() => {
+                    signOut();
+                    setShowProfileMenu(false);
+                  }} 
+                  className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-sm text-red-400 hover:bg-white/5"
+                >
+                  <LogOut className="h-4 w-4" /> Sign Out
+                </button>
               </div>
-              <Link to="/profile" className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5">
-                <User className="h-4 w-4" /> My Profile
-              </Link>
-              <Link to="/mpp" className="flex items-center gap-3 rounded-lg p-3 text-sm hover:bg-white/5">
-                <Moon className="h-4 w-4" /> MPP Dashboard
-              </Link>
-              <button onClick={() => signOut()} className="flex w-full items-center gap-3 rounded-lg p-3 text-left text-sm text-red-400 hover:bg-white/5">
-                <LogOut className="h-4 w-4" /> Sign Out
-              </button>
-            </div>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2">
